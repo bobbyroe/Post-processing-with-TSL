@@ -1,18 +1,27 @@
 import * as THREE from "three";
-import { FBXLoader } from "jsm/loaders/FBXLoader.js";
-import { OrbitControls } from "jsm/controls/OrbitControls.js";
-import getLayer from "./libs/getLayer.js";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { color, computeSkinning, Fn, instancedArray, instanceIndex, objectWorldMatrix, range, screenUV, shapeCircle, time } from "three/tsl";
 
 const w = window.innerWidth;
 const h = window.innerHeight;
 const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
 const camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1000);
 camera.position.z = 5;
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGPURenderer({ antialias: true });
 renderer.setSize(w, h);
+document.body.appendChild(renderer.domElement);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-document.body.appendChild(renderer.domElement);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+// background
+const bgColor = screenUV.y.mix(color(0x102050), color(0x102050));
+const bgVignette = screenUV.distance(.35).remapClamp(0.0, 0.6).oneMinus();
+const bgIntensity = 1;
+scene.backgroundNode = bgColor.mul(bgVignette.mul(bgIntensity));
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -31,7 +40,6 @@ loader.load(path, (fbx) => {
 
   function getMaterial() {
     const material = new THREE.MeshMatcapMaterial({
-      
       matcap: textureLoader.load("./assets/fire-edge-blue.jpg"),
     });
     return material;
@@ -45,14 +53,75 @@ loader.load(path, (fbx) => {
       if (c.isMesh) {
         if (c.material.name === "Alpha_Body_MAT") {
           // c.material.color = new THREE.Color(0x994400);
-          c.material = getMaterial();
+          // c.material = getMaterial();
         }
         c.castShadow = true;
+        // ***
+        c.visible = false;
+
+        const countOfPoints = c.geometry.getAttribute('position').count;
+
+        const pointPositionArray = instancedArray(countOfPoints, 'vec3').setPBO(true);
+        const pointSpeedArray = instancedArray(countOfPoints, 'vec3').setPBO(true);
+
+        const pointSpeedAttribute = pointSpeedArray.toAttribute();
+        const skinningPosition = computeSkinning(c);
+
+        const materialPoints = new THREE.PointsNodeMaterial();
+        materialPoints.colorNode = pointSpeedAttribute.mul(1.0).mix(color(0xff0044), color(0x550000));
+        materialPoints.opacityNode = shapeCircle();
+        materialPoints.sizeNode = pointSpeedAttribute.length().exp().mul(1).add(1);
+        materialPoints.sizeAttenuation = false;
+
+        const updateSkinningPoints = Fn(() => {
+
+          const pointPosition = pointPositionArray.element(instanceIndex);
+          const pointSpeed = pointSpeedArray.element(instanceIndex);
+
+          const skinningWorldPosition = objectWorldMatrix(c).mul(skinningPosition);
+
+          const skinningSpeed = skinningWorldPosition.sub(pointPosition);
+
+          pointSpeed.assign(skinningSpeed);
+          pointPosition.assign(skinningWorldPosition);
+
+        }, 'void');
+
+        materialPoints.positionNode = Fn(() => {
+
+          updateSkinningPoints();
+
+          return pointPositionArray.toAttribute();
+
+        })().compute(countOfPoints).onInit(() => {
+
+          // initialize point positions and speeds
+
+          renderer.compute(updateSkinningPoints().compute(countOfPoints));
+
+        });
+        //
+        const lifeRange = range(0.0, 0.2);
+        const offsetRange = range(new THREE.Vector3(-1, -1, -1), new THREE.Vector3(1, 1, 1));
+
+        const speed = range(0.5, 2);
+        const scaledTime = time.mul(speed);
+
+        const lifeTime = scaledTime.mul(lifeRange);
+        const life = lifeTime.div(lifeRange);
+
+        materialPoints.positionNode = materialPoints.positionNode.add(offsetRange.mul(lifeTime));
+        //
+        const pointCloud = new THREE.Sprite(materialPoints);
+        pointCloud.count = countOfPoints;
+        scene.add(pointCloud);
+        // ***
       }
     });
+
     const mixer = new THREE.AnimationMixer(char);
     const update = (t) => {
-      mixer.update(0.02);
+      mixer.update(0.01);
     };
     char.userData = { mixer, update };
     return char;
@@ -123,33 +192,19 @@ function initScene(sceneData) {
   sunLight.castShadow = true;
   scene.add(sunLight);
 
-  // const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444);
-  // scene.add(hemiLight);
-
-  // Sprites BG
-  const sprites = getLayer({
-    hue: 0.58,
-    numSprites: 8,
-    opacity: 0.2,
-    radius: 10,
-    size: 24,
-    z: -10.5,
-  });
-  scene.add(sprites);
-
   let timeElapsed = 0;
+
   function animate(t = 0) {
     timeElapsed += 0.01;
-    requestAnimationFrame(animate);
-
     character?.userData.update(timeElapsed);
     renderer.render(scene, camera);
     controls.update();
   }
+  renderer.setAnimationLoop(animate);
+
   let index = 2;
   let previousAction;
   playRandomAnimationClip();
-  animate();
 
   function handleWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -172,7 +227,7 @@ function initScene(sceneData) {
     // if (index >= actions.length) {
     //   index = 0;
     // }
-   index = Math.floor(Math.random() * actions.length);
+    index = Math.floor(Math.random() * actions.length);
   }
   window.addEventListener("keydown", (e) => {
     if (e.key === " ") {
