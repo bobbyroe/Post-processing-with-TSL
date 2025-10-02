@@ -8,7 +8,7 @@ const h = window.innerHeight;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 const camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1000);
-camera.position.z = 3;
+camera.position.z = 4;
 const renderer = new THREE.WebGPURenderer({ antialias: true });
 renderer.setSize(w, h);
 document.body.appendChild(renderer.domElement);
@@ -61,7 +61,7 @@ loader.load(path, (fbx) => {
 
     const mixer = new THREE.AnimationMixer(char);
     const update = (t) => {
-      mixer.update(0.01);
+      mixer.update(0.01); // animation speed
     };
     char.userData = { mixer, update };
     return char;
@@ -114,7 +114,7 @@ function initScene(sceneData) {
   const { character, animations } = sceneData;
   const actions = setupActions(character, animations);
   scene.add(character);
-
+  // ground
   const radius = 10;
   const geometry = new THREE.CircleGeometry(radius, 32);
   const material = new THREE.MeshStandardMaterial({
@@ -131,16 +131,19 @@ function initScene(sceneData) {
   sunLight.castShadow = true;
   scene.add(sunLight);
 
-  let timeElapsed = 0;
+  const backLight = new THREE.DirectionalLight(0xffffff, 5);
+  backLight.position.set(-2, 0, -3);
+  scene.add(backLight);
 
   function animate(t = 0) {
-    timeElapsed += 0.01;
-    character?.userData.update(timeElapsed);
+    t *= 0.01;
+    character?.userData.update(t);
     renderer.render(scene, camera);
     controls.update();
   }
   renderer.setAnimationLoop(animate);
 
+  // animations
   let index = 2;
   let previousAction;
   playRandomAnimationClip();
@@ -162,10 +165,6 @@ function initScene(sceneData) {
       action.play();
       previousAction = action;
     }
-    // index += 1;
-    // if (index >= actions.length) {
-    //   index = 0;
-    // }
     index = Math.floor(Math.random() * actions.length);
   }
   window.addEventListener("keydown", (e) => {
