@@ -1,16 +1,7 @@
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { color, pass, screenUV } from "three/tsl";
-
-import { dotScreen } from 'three/addons/tsl/display/DotScreenNode.js';
-import { rgbShift } from 'three/addons/tsl/display/RGBShiftNode.js';
-import { sobel } from "../../src/examples/jsm/tsl/display/SobelOperatorNode.js";
-import { pixelationPass } from 'three/addons/tsl/display/PixelationPassNode.js';
-import { afterImage } from 'three/addons/tsl/display/AfterImageNode.js';
-import { bloom } from 'three/addons/tsl/display/BloomNode.js';
-
-import { outline } from 'three/addons/tsl/display/OutlineNode.js';
+import { color, screenUV } from "three/tsl";
 
 const w = window.innerWidth;
 const h = window.innerHeight;
@@ -44,7 +35,6 @@ const sceneData = {
   animations: [],
 };
 loader.load(path, (fbx) => {
-
   function getMaterial() {
     const material = new THREE.MeshLambertMaterial({
       color: 0x000000,
@@ -78,28 +68,15 @@ loader.load(path, (fbx) => {
 
 //
 const animations = [
-  // "Being Electrocuted",
-  // "Drunk Walk",
   "Female Dynamic Pose",
   "Female Dynamic Pose-02",
   "Floating",
   "Flying",
-  // "Idle",
-  // "Joyful Jump",
-  // "Kneeling Pointing",
-  // "Low Crawl",
-  // "Male Dance Pose",
   "Male Dynamic Pose",
-  // "Neutral Idle",
-  // "Reaction",
-  // "Spat In Face",
-  // "Stand To Roll",
   "Standard Walk",
   "Swimming",
-  // "Thriller Part 3",
   "Treading Water",
   "Walking",
-  // "Waving",
 ];
 const apath = "./assets/animations/";
 manager.onLoad = () => initScene(sceneData);
@@ -137,45 +114,12 @@ function initScene(sceneData) {
   const hemiLight = new THREE.HemisphereLight(0x000000, 0xffff00, 1);
   scene.add(hemiLight);
 
-  // postprocessing
-  const postProcessing = new THREE.PostProcessing(renderer);
-  const scenePass = pass(scene, camera);
-  const scenePassColor = scenePass.getTextureNode();
-
-  const dotScreenPass = dotScreen(scenePassColor);
-  dotScreenPass.scale.value = 0.4;
-
-  const sobelPass = sobel(scenePassColor);
-
-  const rgbShiftPass = rgbShift(dotScreenPass);
-  rgbShiftPass.amount.value = 0.005;
-
-  const pixelation = pixelationPass(scene, camera);
-  pixelation.pixelSize = 8;
-  pixelation.normalEdgeStrength = 0.3;
-  pixelation.depthEdgeStrength = 0.4;
-
-  const afterImagePass = afterImage(sobelPass);
-  afterImagePass.damp.value = 0.96;
-
-  const bloomPass = bloom(sobelPass);
-  bloomPass.strength = 1.5;
-  bloomPass.radius = 0.4;
-  bloomPass.threshold = 0.0;
-
-  const outlinePass = outline(scene, camera, { 
-    selectedObjects: [character],
-   });
-
-  postProcessing.outputNode = scenePass;
-
   const clock = new THREE.Clock();
   let nextTime = 2;
   function animate() {
     const delta = clock.getDelta();
     character?.userData.update(delta);
-    // renderer.render(scene, camera);
-    postProcessing.render();
+    renderer.render(scene, camera);
     controls.update();
     if (clock.getElapsedTime() > nextTime) {
       playRandomAnimationClip();
@@ -208,9 +152,4 @@ function initScene(sceneData) {
     }
     index = Math.floor(Math.random() * actions.length);
   }
-  window.addEventListener("keydown", (e) => {
-    if (e.key === " ") {
-      playRandomAnimationClip();
-    }
-  });
 }
