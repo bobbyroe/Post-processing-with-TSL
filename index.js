@@ -1,7 +1,16 @@
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { color, screenUV } from "three/tsl";
+import { color, pass, screenUV } from "three/tsl";
+
+import { dotScreen } from 'three/addons/tsl/display/DotScreenNode.js';
+import { rgbShift } from 'three/addons/tsl/display/RGBShiftNode.js';
+import { sobel } from "../../src/examples/jsm/tsl/display/SobelOperatorNode.js";
+import { pixelationPass } from 'three/addons/tsl/display/PixelationPassNode.js';
+import { afterImage } from 'three/addons/tsl/display/AfterImageNode.js';
+import { bloom } from 'three/addons/tsl/display/BloomNode.js';
+
+import { outline } from 'three/addons/tsl/display/OutlineNode.js';
 
 const w = window.innerWidth;
 const h = window.innerHeight;
@@ -61,7 +70,7 @@ loader.load(path, (fbx) => {
 
     const mixer = new THREE.AnimationMixer(char);
     const update = (t) => {
-      mixer.update(0.01); // animation speed
+      mixer.update(t); // animation speed
     };
     char.userData = { mixer, update };
     return char;
@@ -135,10 +144,45 @@ function initScene(sceneData) {
   backLight.position.set(-2, 0, -3);
   scene.add(backLight);
 
-  function animate(t = 0) {
-    t *= 0.01;
-    character?.userData.update(t);
-    renderer.render(scene, camera);
+  // postprocessing
+  const postProcessing = new THREE.PostProcessing(renderer);
+  const scenePass = pass(scene, camera);
+  const scenePassColor = scenePass.getTextureNode();
+
+  // const dotScreenPass = dotScreen(scenePassColor);
+  // dotScreenPass.scale.value = 0.4;
+
+  const sobelPass = sobel(scenePassColor);
+
+  const rgbShiftPass = rgbShift(sobelPass);
+  rgbShiftPass.amount.value = 0.005;
+
+  const pixelation = pixelationPass(scene, camera);
+  pixelation.pixelSize = 8;
+  pixelation.normalEdgeStrength = 0.3;
+  pixelation.depthEdgeStrength = 0.4;
+
+  // const afterImagePass = afterImage(scenePassColor);
+  // afterImagePass.damp.value = 0.96;
+
+  const bloomPass = bloom(sobelPass);
+  // bloomPass.strength = 1.5;
+  // bloomPass.radius = 0.4;
+  // bloomPass.threshold = 0.0;
+
+
+  const outlinePass = outline(scene, camera, { 
+    selectedObjects: [character, plane],
+   });
+
+  postProcessing.outputNode = scenePass;
+  
+  const clock = new THREE.Clock();
+  function animate() {
+    const delta = clock.getDelta();
+    character?.userData.update(delta); // todo calculate delta
+    // renderer.render(scene, camera);
+    postProcessing.render();
     controls.update();
   }
   renderer.setAnimationLoop(animate);
