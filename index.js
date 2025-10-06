@@ -5,7 +5,7 @@ import { color, pass, screenUV } from "three/tsl";
 
 import { dotScreen } from 'three/addons/tsl/display/DotScreenNode.js';
 import { rgbShift } from 'three/addons/tsl/display/RGBShiftNode.js';
-import { sobel } from "../../src/examples/jsm/tsl/display/SobelOperatorNode.js";
+import { sobel } from "three/addons/examples/jsm/tsl/display/SobelOperatorNode.js";
 import { pixelationPass } from 'three/addons/tsl/display/PixelationPassNode.js';
 import { afterImage } from 'three/addons/tsl/display/AfterImageNode.js';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
