@@ -1,6 +1,6 @@
 # Three.js + WebGPU Post-Processing Effects
 
-In this beginner-friendly workshop, we wire up a WebGPU renderer in Three.js and stack post-processing passes step by step. Along the way you’ll sharpen the essentials like asset loading, TSL operators and animation so you can create amazing 3D on the web. Start here, then level up effect-by-effect. If it helps, drop a sub and explore my other tutorials/resources.
+In this beginner-friendly project, we'll leverage the WebGPU renderer in Three.js and layer post-processing passes step by step. Along the way we’ll sharpen the essentials like asset loading, TSL operators and animation so you can create amazing 3D on the web. Start here, then level up effect-by-effect. If it helps, drop a sub and explore my other tutorials/resources.
 
 Watch the tutorial on [YouTube]()
 
