@@ -1,20 +1,11 @@
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { color, pass, screenUV } from "three/tsl";
-
-import { dotScreen } from 'three/addons/tsl/display/DotScreenNode.js';
-import { sobel } from "three/addons/tsl/display/SobelOperatorNode.js";
-import { rgbShift } from 'three/addons/tsl/display/RGBShiftNode.js';
-import { pixelationPass } from 'three/addons/tsl/display/PixelationPassNode.js';
-import { afterImage } from 'three/addons/tsl/display/AfterImageNode.js';
-import { bloom } from 'three/addons/tsl/display/BloomNode.js';
-
+import { color, screenUV } from "three/tsl";
 const w = window.innerWidth;
 const h = window.innerHeight;
 const scene = new THREE.Scene();
 
-// scene.background = new THREE.Color(0x000000);
 const camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1000);
 camera.position.z = 4;
 const renderer = new THREE.WebGPURenderer({ antialias: true });
@@ -121,41 +112,12 @@ function initScene(sceneData) {
   const hemiLight = new THREE.HemisphereLight(0x000000, 0xffff00, 1);
   scene.add(hemiLight);
 
-  // post-processing
-  const postProcessing = new THREE.PostProcessing(renderer);
-  const scenePass = pass(scene, camera);
-  const scenePassColor = scenePass.getTextureNode();
-
-  const dotScreenPass = dotScreen(scenePassColor);
-  dotScreenPass.scale.value = 0.4;
-
-  const rgbPass = rgbShift(scenePassColor);
-  rgbPass.amount.value = 0.02;
-
-  const pixelation = pixelationPass(scene, camera);
-  pixelation.pixelSize = 8;
-  pixelation.normalEdgeStrength = 0.3;
-  pixelation.depthEdgeStrength = 0.4;
-
-  const sobelPass = sobel(scenePassColor);
-
-  const afterImagePass = afterImage(sobelPass);
-  afterImagePass.damp.value = 0.96;
-
-  const bloomPass = bloom(scenePassColor);
-  // bloomPass.strength = 1.5;
-  // bloomPass.radius = 0.4;
-  bloomPass.threshold.value = 1;
-
-  // dotScreenPass.mul(rgbPass).add(bloomPass).add(afterImagePass);
-  postProcessing.outputNode = scenePassColor;
-
   const clock = new THREE.Clock();
   let nextTime = 2;
   function animate() {
     const delta = clock.getDelta();
     character?.userData.update(delta);
-    postProcessing.render();
+    renderer.render(scene, camera);
     controls.update();
     if (clock.getElapsedTime() > nextTime) {
       playRandomAnimationClip();
