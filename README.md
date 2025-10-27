@@ -2,7 +2,7 @@
 
 In this beginner-friendly project, we'll leverage the WebGPU renderer in Three.js and layer post-processing passes step by step. Along the way we’ll sharpen the essentials like asset loading, TSL operators and animation so you can create amazing 3D on the web. Start here, then level up effect-by-effect. If it helps, drop a sub and explore my other tutorials/resources.
 
-Watch the tutorial on [YouTube]()
+Watch the tutorial on [YouTube](https://youtu.be/KeJV_3LzXIA)
 
 ![image](./post-shot.png)
 
